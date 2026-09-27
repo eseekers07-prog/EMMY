@@ -1,0 +1,16 @@
+# Credentials and deployment secrets
+*.json
+*-service-account*.json
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Uploaded product photos and generated files
+static/uploads/
+*.log

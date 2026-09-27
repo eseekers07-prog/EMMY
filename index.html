@@ -1,0 +1,797 @@
+﻿<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="csrf-token" content="__CSRF_TOKEN__">
+<title>EMMY Cloths | POS Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.12.1/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root{--navy:#0F172A;--green:#10B981;--red:#EF4444;--bg:#F8FAFC;}
+  body{font-family:Inter,system-ui,sans-serif;background:var(--bg)}
+  .card{background:#fff;border-radius:1rem;box-shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+  .navitem.active{background:var(--navy);color:#fff}
+  ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+  .analytics-toolbar{display:flex;align-items:center;gap:10px;margin:18px 0 14px!important;font-size:13px;color:var(--muted)}
+  .analytics-toolbar select{border:1px solid var(--line);border-radius:9px;padding:7px 10px}
+  .report-actions{display:flex;gap:8px;margin-left:auto}
+  .report-button{padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:12px;font-weight:650}
+  .report-button.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .report-print-header{display:none}
+  body.dark-mode .report-button{background:#18253a;color:#e6edf7;border-color:var(--line)}
+  body.dark-mode .report-button.primary{background:#177a5a;color:#fff;border-color:#177a5a}
+  @media(max-width:600px){.analytics-toolbar{flex-wrap:wrap}.report-actions{width:100%;margin-left:0}.report-button{flex:1}}
+  .analytics-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(250px,1fr);gap:14px;margin-top:12px}
+  .chart-card{min-width:0;background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;margin-top:14px}
+  .chart-card h3{font-size:15px;margin:0;color:var(--ink)}
+  .chart-card p{font-size:12px;color:var(--muted);margin:5px 0 10px}
+  .chart-area{min-height:190px;overflow:hidden}
+  .chart-area svg{display:block;width:100%;height:auto}
+  .chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0;font-size:12px;color:#566176}
+  .legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+  @media(max-width:800px){.analytics-grid{grid-template-columns:1fr}}
+  .product-thumb{width:46px;height:50px;flex:none;object-fit:cover;border-radius:8px;background:#eef2f7}
+  .product-thumb.empty{display:flex;align-items:center;justify-content:center;color:#8793a6;font-size:9px}
+  .product-cell{display:flex;align-items:center;gap:10px;min-width:180px}
+  .pos-product-photo{width:100%;height:100%;object-fit:cover;border-radius:9px}
+  .image-preview{display:block;max-width:100%;max-height:150px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+  #receipt{display:none}
+  #barcodePrint{display:none}
+  .sku-entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center}
+  .barcode-form{margin-top:10px;padding:10px;border:1px dashed var(--line);text-align:center}
+  .barcode-form svg{width:100%;max-height:76px}
+  #barcodeWrap:not(.hidden){display:flex;position:fixed;inset:0;z-index:30;align-items:center;justify-content:center;background:#10182799}
+  .barcode-card{width:min(100%,440px);padding:22px;background:white;border-radius:18px}
+  .barcode-card-head{display:flex;justify-content:space-between}
+  .barcode-preview{text-align:center;padding:16px}
+  .barcode-preview svg{max-width:100%;height:100px}
+  .barcode-print-button{width:100%;padding:12px;background:#111c35;color:white}
+  #barcodePrint{display:none}
+  @media print{
+    @page{size:A4 portrait;margin:5mm}
+    html.printing-barcode-page,body.printing-barcode{width:200mm!important;min-width:200mm!important;height:287mm!important;min-height:287mm!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#fff!important}
+    body.printing-barcode>*:not(#barcodePrint){display:none!important}
+    body.printing-barcode>#barcodePrint{display:grid!important;visibility:visible!important;position:static!important;box-sizing:border-box!important;width:200mm!important;height:287mm!important;margin:0!important;padding:0!important;overflow:hidden!important;grid-template-columns:repeat(4,1fr)!important;grid-template-rows:repeat(10,1fr)!important;column-gap:1.5mm!important;row-gap:1mm!important;font-family:Arial,sans-serif!important}
+    body.printing-barcode .barcode-label{display:flex!important;box-sizing:border-box!important;min-width:0!important;min-height:0!important;overflow:hidden!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;break-inside:avoid!important;page-break-inside:avoid!important}
+    body.printing-barcode .barcode-label-name{max-width:100%!important;overflow:hidden!important;white-space:nowrap!important;font-size:7pt!important;font-weight:700!important;line-height:1.1!important}
+    body.printing-barcode .barcode-label svg{display:block!important;width:44mm!important;height:15mm!important;max-width:100%!important;margin:0 auto!important}
+    body.printing-barcode .barcode-label-value{font-size:6.5pt!important;line-height:1.1!important}
+    body.printing-barcode-only .barcode-label-name{display:none!important}
+  }
+  .receipt-brand{text-align:center;font-size:18px;font-weight:800;letter-spacing:1.2px}
+  .receipt-subtitle{text-align:center;font-size:10px;margin:2px 0 10px;color:#444}
+  .receipt-meta{font-size:10px;line-height:1.55;margin:8px 0}
+  .receipt-line{border:0;border-top:1px dashed #777;margin:7px 0}
+  .receipt-items{font-size:10px}
+  .receipt-item{display:grid;grid-template-columns:minmax(0,1fr) 12mm 19mm;gap:2mm;padding:3px 0;align-items:start}
+  .receipt-item-name{overflow-wrap:anywhere}
+  .receipt-qty,.receipt-price{text-align:right;white-space:nowrap}
+  .receipt-totals{font-size:10px;line-height:1.7}
+  .receipt-total{display:flex;justify-content:space-between;gap:4mm}
+  .receipt-grand{font-weight:800;font-size:13px;border-top:1px dashed #777;padding-top:5px;margin-top:4px}
+  @media print{
+    @page{size:80mm 120mm;margin:0}
+    html,body{width:80mm!important;min-width:80mm!important;height:auto!important;margin:0!important;padding:0!important;background:#fff!important}
+    body>*:not(#receipt){display:none!important}
+    #receipt,#receipt *{visibility:visible!important}
+    #receipt{display:block!important;position:static!important;width:72mm!important;height:auto!important;margin:0 auto!important;padding:3mm!important;overflow:visible!important;background:#fff!important;color:#000!important;font-family:"Nirmala UI","Iskoola Pota",Arial,sans-serif!important;font-size:10px!important;line-height:1.35!important;box-shadow:none!important;border:0!important}
+    #receipt *{box-shadow:none!important}
+    .receipt-item,.receipt-total{break-inside:avoid;page-break-inside:avoid}
+  }
+  .record-action{padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--ink);font-size:11px;font-weight:650}
+  .record-action.danger{color:#dc4c4c}
+  .header-actions{display:flex;align-items:center;gap:10px}
+  #themeToggle{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font-size:12px;font-weight:650}
+  #themeToggle .theme-icon{font-size:15px;line-height:1}
+  .app-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:30px;padding:17px 2px 4px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+  .footer-brand{font-weight:750;color:var(--ink)}
+  .footer-status{display:inline-flex;align-items:center;gap:7px}
+  .footer-dot{width:7px;height:7px;border-radius:50%;background:#10b981}
+  body.dark-mode{color-scheme:dark;--navy:#203552;--green:#34d399;--ink:#e6edf7;--muted:#9aa9bf;--line:#2a3850;--bg:#0b1220;background:var(--bg)!important;color:var(--ink)!important}
+  body.dark-mode main h1,body.dark-mode main h2,body.dark-mode main h3{color:#eef4fc!important}
+  body.dark-mode .card,body.dark-mode .chart-card,body.dark-mode .barcode-card,body.dark-mode #modalWrap>div,body.dark-mode .date-chip,body.dark-mode #themeToggle{background:#131e30!important;border-color:var(--line)!important;color:var(--ink)!important}
+  body.dark-mode .bg-white,body.dark-mode .bg-slate-50,body.dark-mode .bg-slate-100{background-color:#18253a!important}
+  body.dark-mode .text-slate-800,body.dark-mode .text-slate-700,body.dark-mode .text-slate-600{color:#dce6f3!important}
+  body.dark-mode .text-slate-500,body.dark-mode .text-slate-400,body.dark-mode .text-slate-300{color:#9aa9bf!important}
+  body.dark-mode .border,body.dark-mode th,body.dark-mode td{border-color:var(--line)!important}
+  body.dark-mode th{background:#172338!important;color:#9eacc0!important}
+  body.dark-mode input,body.dark-mode select,body.dark-mode textarea{background:#101a2b!important;color:#e6edf7!important;border-color:#34435b!important}
+  body.dark-mode input::placeholder{color:#8291a8!important}
+  body.dark-mode .chart-card p,body.dark-mode .analytics-toolbar{color:#aab7c9!important}
+  body.dark-mode .chart-card svg text{fill:#c0cede!important}
+  body.dark-mode .product-thumb.empty{background:#25334a!important}
+  body.dark-mode .barcode-card-head button{color:#dce6f3}
+  body.dark-mode .app-footer{border-color:var(--line)}
+  @media(max-width:600px){.app-footer{align-items:flex-start;flex-direction:column;gap:7px}.header-actions{gap:6px}#themeToggle{padding:8px 10px}}
+  #toast{transition:opacity .3s}
+  .hidden{display:none!important}
+  :root{color-scheme:light;--navy:#111c35;--green:#0e9f6e;--ink:#172033;--muted:#718096;--line:#e7ebf2;--bg:#f4f6fa}
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);background:var(--bg);font-family:"Nirmala UI","Iskoola Pota","Noto Sans Sinhala",Inter,"Segoe UI",Arial,sans-serif}
+  .min-h-screen{display:grid!important;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+  aside{width:auto!important;height:100vh!important;position:sticky!important;top:0;z-index:5;background:linear-gradient(180deg,#101a30,#172442)!important;padding:24px 16px!important;box-shadow:8px 0 28px #18233a12}
+  aside>div:first-child{font-size:22px!important;letter-spacing:-.5px;margin:4px 10px 30px!important}
+  .navitem{width:100%;min-height:46px;text-align:left;border:0;background:transparent;color:#c7d2e2;cursor:pointer;transition:.18s;font-size:14px!important}
+  .navitem:hover{background:#ffffff12!important;color:#fff}
+  .navitem.active{background:#ffffff18!important;color:#fff;box-shadow:inset 3px 0 #34d399}
+  main{min-width:0;padding:30px clamp(18px,3vw,42px)!important;max-width:none!important}
+  #metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px!important;margin:0 0 24px!important}
+  #tab-pos{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.9fr);gap:20px}
+  #tab-pos>div:first-child{min-width:0}
+  #tab-pos>div:first-child>div:first-child{margin-bottom:14px}
+  #productGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+  #cartItems{min-height:64px}
+  #modalWrap:not(.hidden){display:flex;position:fixed;inset:0;align-items:center;justify-content:center;background:#10182780;z-index:20;padding:18px}
+  #modalWrap>div{width:min(100%,440px);background:white;padding:24px}
+  #modalBody{display:grid;gap:10px}
+  .card{border:1px solid var(--line);border-radius:16px!important;box-shadow:0 6px 22px #18233a08!important}
+  #metrics .card{padding:18px!important;min-height:100px}
+  main>section{animation:appear .2s ease-out}
+  @keyframes appear{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:none}}
+  main>section>div:first-child{margin-bottom:16px}
+  main h2{font-size:22px!important;letter-spacing:-.4px}
+  button{font:inherit;transition:filter .15s,transform .15s;cursor:pointer}
+  button:hover{filter:brightness(.96)}
+  button:active{transform:translateY(1px)}
+  input,select{color:var(--ink);background:#fff;min-height:38px}
+  input:focus,select:focus{outline:3px solid #10b98125;border-color:#10b981!important}
+  table{border-collapse:collapse;min-width:600px}
+  th{padding:13px 12px!important;font-size:11px;text-transform:uppercase;letter-spacing:.07em;background:#f8fafc}
+  td{padding:13px 12px!important;border-top:1px solid #edf0f5}
+  #productGrid .card{cursor:pointer;border-radius:15px!important}
+  #productGrid .card:hover{border-color:#9de6ca;transform:translateY(-2px)}
+  #checkoutBtn{background:var(--green)!important;border:0;box-shadow:0 6px 14px #0e9f6e2b}
+  #modalWrap{backdrop-filter:blur(4px)}
+  #modalWrap>div{border-radius:20px!important;box-shadow:0 24px 80px #101a3050!important}
+  #modalBody input,#modalBody select{min-height:44px}
+  #toast{max-width:min(420px,calc(100vw - 32px));padding:14px 18px!important;box-shadow:0 10px 30px #0003}
+  @media(max-width:1000px){#tab-pos{grid-template-columns:minmax(0,1fr)}#tab-pos>div:last-child{position:static!important}}
+  @media(max-width:850px){.min-h-screen{grid-template-columns:205px minmax(0,1fr)}aside{padding:18px 12px!important}main{padding:22px 16px!important}#metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:600px){.min-h-screen{display:flex!important;flex-direction:column}aside{position:relative!important;width:100%!important;height:auto!important;padding:12px!important;display:flex;flex-direction:row!important;flex-wrap:wrap;gap:5px!important}aside>div:first-child{width:100%;margin:0 8px 5px!important}.navitem{width:auto;flex:1 1 30%;min-height:38px;padding:8px!important;justify-content:center;font-size:12px!important}aside>div:last-child{display:none}main{padding:16px 12px!important}#metrics .card{padding:12px!important}.sticky{position:static!important}#productGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .app-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}
+  .app-header h1{font-size:26px;margin:0;letter-spacing:-.7px;color:#121c31}
+  .app-header p{margin:5px 0 0;color:var(--muted);font-size:13px}
+  .date-chip{padding:9px 13px;border:1px solid var(--line);background:#fff;border-radius:999px;font-size:12px;color:#58657b;white-space:nowrap}
+  @media(max-width:600px){.app-header h1{font-size:21px}.date-chip{display:none}}
+</style>
+</head>
+<body class="text-slate-800">
+<div class="flex min-h-screen">
+  <aside class="w-60 shrink-0 bg-[var(--navy)] text-slate-200 p-4 flex flex-col gap-1 sticky top-0 h-screen">
+    <div class="text-white font-bold text-xl mb-6 px-2">EMMY <span class="text-emerald-400">Cloths</span></div>
+    <button data-tab="pos" class="navitem active flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium"><i data-lucide="scan-line" class="w-4 h-4"></i>POS Billing</button>
+    <button data-tab="products" class="navitem flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/10">Products & Stock</button>
+    <button data-tab="fabric" class="navitem flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/10"><i data-lucide="layers" class="w-4 h-4"></i>Fabric Stock</button>
+    <button data-tab="production" class="navitem flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/10"><i data-lucide="shirt" class="w-4 h-4"></i>Production Log</button>
+    <button data-tab="expenses" class="navitem flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/10"><i data-lucide="wallet" class="w-4 h-4"></i>Expenses & Wages</button>
+    <button data-tab="dash" class="navitem flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/10"><i data-lucide="line-chart" class="w-4 h-4"></i>Analytics</button>
+    <div class="mt-auto text-[10px] text-slate-400 px-2">Connected to Google Sheets backend</div>
+    <button id="logoutBtn" type="button" onclick="logoutApp()" style="display:__LOGOUT_DISPLAY__" class="mt-3 px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-white/10">Sign out</button>
+  </aside>
+
+  <main class="flex-1 p-5 max-w-full overflow-x-hidden">
+    <header class="app-header"><div><h1 id="pageTitle">POS Billing</h1><p id="pageSubtitle">Create a sale, manage your cart, and print a customer receipt.</p></div><div class="header-actions"><button id="themeToggle" type="button" aria-label="Switch to dark mode" aria-pressed="false"><span class="theme-icon" id="themeIcon">&#9790;</span><span id="themeLabel">Dark mode</span></button><div class="date-chip" id="todayDate"></div></div></header>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" id="metrics"></div>
+
+    <!-- POS TAB -->
+    <section id="tab-pos" class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-4">
+        <div class="card p-3">
+          <div class="flex items-center gap-2 bg-slate-50 border rounded-xl px-3">
+            <i data-lucide="barcode" class="w-5 h-5 text-slate-400"></i>
+            <input id="scanInput" autofocus placeholder="Scan SKU / Barcode / search item, then Enter" class="w-full py-3 bg-transparent outline-none text-sm">
+          </div>
+        </div>
+        <div id="productGrid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+      </div>
+
+      <div class="card p-4 flex flex-col gap-3 h-fit sticky top-5">
+        <div class="flex justify-between items-center">
+          <div class="font-semibold">New Sale</div>
+          <button onclick="clearCart()" class="text-xs text-slate-400 hover:text-red-500">Clear</button>
+        </div>
+        <div id="cartItems" class="divide-y max-h-80 overflow-y-auto"></div>
+        <div class="flex items-center gap-2 text-sm">
+          <span>Discount</span>
+          <select id="discType" class="border rounded px-1 py-1 text-xs"><option value="pct">%</option><option value="flat">LKR</option></select>
+          <input id="discVal" type="number" value="0" min="0" class="border rounded px-2 py-1 w-20 text-xs">
+        </div>
+        <select id="payMethod" class="border rounded px-2 py-2 text-sm"><option>Cash</option><option>Card</option><option>Bank Transfer</option></select>
+        <div class="border-t pt-2 text-sm space-y-1">
+          <div class="flex justify-between"><span>Subtotal</span><span id="subtotal">LKR 0</span></div>
+          <div class="flex justify-between text-red-500"><span>Discount</span><span id="discAmt">- LKR 0</span></div>
+          <div class="flex justify-between text-lg font-bold"><span>Total</span><span id="grandTotal" class="text-[var(--navy)]">LKR 0</span></div>
+        </div>
+        <button id="checkoutBtn" onclick="completeSale()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl flex justify-center items-center gap-2"><i data-lucide="printer" class="w-4 h-4"></i>Complete Sale & Print Receipt</button>
+      </div>
+      <div class="card overflow-x-auto lg:col-span-3">
+        <div class="p-4 pb-2 font-semibold">Sales history</div>
+        <table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-left"><tr><th>Invoice</th><th>Date & time</th><th>Items</th><th>Total</th><th>Payment</th><th>Actions</th></tr></thead><tbody id="salesBody"></tbody></table>
+      </div>
+    </section>
+
+    <!-- FABRIC TAB -->
+    <section id="tab-fabric" class="hidden space-y-4">
+      <div class="flex justify-between items-center"><h2 class="font-semibold text-lg">Fabric Stock (රෙදි තොග)</h2>
+        <button onclick="showModal('fabric')" class="bg-[var(--navy)] text-white text-sm px-3 py-2 rounded-lg flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i>Add Fabric Roll</button></div>
+      <div class="card overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-left"><tr><th class="p-3">Fabric</th><th>Meters</th><th>Cost/m</th><th>Total Cost</th><th>Supplier</th><th>Status</th><th>Actions</th></tr></thead><tbody id="fabricBody"></tbody></table></div>
+    </section>
+
+    <section id="tab-products" class="hidden space-y-4">
+      <div class="flex justify-between items-center"><h2 class="font-semibold text-lg">Products & Stock</h2>
+        <button onclick="showModal('product')" class="bg-[var(--navy)] text-white text-sm px-3 py-2 rounded-lg">Add Product</button></div>
+      <div class="card overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-left"><tr><th class="p-3">SKU</th><th>Product</th><th>Size</th><th>Price</th><th>Stock</th><th>Barcode</th><th>Actions</th></tr></thead><tbody id="productBody"></tbody></table></div>
+    </section>
+
+    <!-- PRODUCTION TAB -->
+    <section id="tab-production" class="hidden space-y-4">
+      <div class="flex justify-between items-center"><h2 class="font-semibold text-lg">Production Log (නිෂ්පාදන වාර්තා)</h2>
+        <button onclick="showModal('production')" class="bg-[var(--navy)] text-white text-sm px-3 py-2 rounded-lg flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i>Log Production</button></div>
+      <div class="card overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-left"><tr><th class="p-3">Item</th><th>Size</th><th>Qty</th><th>Meters Used</th><th>Cost/piece</th><th>Actions</th></tr></thead><tbody id="prodBody"></tbody></table></div>
+    </section>
+
+    <!-- EXPENSES TAB -->
+    <section id="tab-expenses" class="hidden space-y-4">
+      <div class="flex justify-between items-center"><h2 class="font-semibold text-lg">Expenses & Tailor Wages (වියදම් සහ මැහුම් වැටුප්)</h2>
+        <button onclick="showModal('expense')" class="bg-[var(--navy)] text-white text-sm px-3 py-2 rounded-lg flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i>Add Entry</button></div>
+      <div id="expenseList" class="card divide-y"></div>
+    </section>
+
+    <!-- DASHBOARD TAB -->
+    <section id="tab-dash" class="hidden">
+      <div class="card p-5"><h2 class="font-semibold text-lg mb-2">Profit & Loss (ලාභ හා අලාභ)</h2>
+        <p class="text-sm text-slate-500">Live figures pulled from the Google Sheets database.</p>
+        <div class="analytics-toolbar"><label for="analyticsDays">Period</label><select id="analyticsDays" onchange="loadAnalytics()"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select><div class="report-actions"><button class="report-button" type="button" onclick="downloadAnalyticsCSV()">Download CSV</button><button class="report-button primary" type="button" onclick="printAnalyticsReport()">Save report as PDF</button></div></div>
+        <div class="report-print-header"><h1>EMMY CLOTHS | ANALYTICS REPORT</h1><p id="analyticsPrintMeta"></p></div>
+        <div class="analytics-grid"><div class="chart-card"><h3>Revenue & costs</h3><p>Daily totals for the selected period</p><div id="trendChart" class="chart-area"></div></div><div class="chart-card"><h3>Top products</h3><p>Items ranked by sales</p><div id="topProductsChart" class="chart-area"></div></div></div>
+        <div class="chart-card category-card"><h3>Expense breakdown</h3><p>Expenses and production costs in the selected period</p><div id="expenseChart" class="chart-area"></div></div>
+        <div id="dashDetail" class="mt-4 grid sm:grid-cols-2 gap-3 text-sm"></div>
+      </div>
+    </section>
+    <footer class="app-footer">
+      <span class="footer-brand">EMMY Cloths <span id="footerYear"></span></span>
+      <span>Store management | Sales | Inventory | Analytics</span>
+      <span class="footer-status"><i class="footer-dot"></i>Google Sheets data storage</span>
+    </footer>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div id="modalWrap" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+  <div class="card p-5 w-full max-w-sm space-y-3">
+    <div class="flex justify-between items-center"><h3 id="modalTitle" class="font-semibold"></h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <div id="modalBody" class="space-y-2"></div>
+    <button onclick="submitModal()" class="w-full bg-[var(--navy)] text-white py-2 rounded-lg text-sm font-medium">Save</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-4 right-4 bg-slate-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50"></div>
+
+<!-- RECEIPT -->
+<div id="receipt">
+  <div class="receipt-brand">EMMY CLOTHS</div>
+  <div class="receipt-subtitle">Thank you for shopping with us</div>
+  <hr class="receipt-line">
+  <div id="rMeta" class="receipt-meta"></div>
+  <hr class="receipt-line">
+  <div id="rItems" class="receipt-items"></div>
+  <hr class="receipt-line">
+  <div id="rTotals" class="receipt-totals"></div>
+  <div class="receipt-subtitle" style="margin-top:10px">*** THANK YOU ***</div>
+</div>
+
+<div id="barcodeWrap" class="hidden fixed inset-0 items-center justify-center p-4"><div class="barcode-card"><div class="barcode-card-head"><div><h3 id="barcodeTitle">Product barcode</h3><p id="barcodeSubtitle"></p></div><button type="button" onclick="closeBarcode()">Close</button></div><div class="barcode-preview"><svg id="barcodePreviewLarge"></svg></div><button type="button" class="barcode-print-button" onclick="printBarcodeLabel(false)">Print product label</button><button type="button" class="barcode-only-button" onclick="printBarcodeLabel(true)">Print barcode only</button></div></div>
+<div id="barcodePrint"><div id="barcodePrintName"></div><svg id="barcodePrintSvg"></svg><div id="barcodePrintValue"></div></div>
+<script>
+function icons(){ if(window.lucide && typeof window.lucide.createIcons==='function') window.lucide.createIcons(); }
+icons();
+const fmt = n => 'LKR ' + Number(n||0).toLocaleString('en-LK',{maximumFractionDigits:0});
+
+async function logoutApp(){
+  const token=document.querySelector('meta[name="csrf-token"]')?.content||'';
+  await fetch('/logout',{method:'POST',headers:{'X-CSRF-Token':token}});
+  window.location.assign('/login');
+}
+function toast(msg, isError=false){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  t.style.background = isError ? '#EF4444' : '#0F172A';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.add('hidden'), 3000);
+}
+
+async function api(method, url, body){
+  try{
+    const res = await fetch(url, {
+      method,
+      headers: {
+        ...(body && !(body instanceof FormData) ? {'Content-Type':'application/json'} : {}),
+        ...(method.toUpperCase() !== 'GET' ? {'X-CSRF-Token':document.querySelector('meta[name="csrf-token"]')?.content||''} : {}),
+      },
+      body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
+    });
+    const responseText=await res.text();
+    let data;
+    try{data=JSON.parse(responseText)}catch(e){
+      throw new Error('The server returned a web page instead of API data (HTTP '+res.status+'). Restart app.py so its API routes are loaded, then refresh this page.');
+    }
+    if(res.status===401&&data.login_required){window.location.assign('/login');throw new Error('Please sign in again.');}
+    if(!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }catch(err){
+    toast(err.message || 'Could not reach server', true);
+    throw err;
+  }
+}
+
+// ---- Product catalog (edit this list to match your real stock) ----
+let products = [
+  {sku:'EMMY-TS-BLK-M',name:'Cotton Crew Neck T-Shirt',size:'M',price:2500,stock:40},
+  {sku:'EMMY-TS-WHT-L',name:'Cotton Crew Neck T-Shirt',size:'L',price:2500,stock:8},
+  {sku:'EMMY-PL-NVY-S',name:'Classic Polo Shirt',size:'S',price:3200,stock:25},
+  {sku:'EMMY-DN-BLU-32',name:'Slim Fit Denim Jeans',size:'32',price:6500,stock:15},
+  {sku:'EMMY-HD-GRY-XL',name:'Fleece Hoodie',size:'XL',price:5800,stock:5},
+  {sku:'EMMY-SK-BLK-M',name:'A-Line Skirt',size:'M',price:3400,stock:20},
+];
+let cart = [];
+
+function renderProducts(filter=''){
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = products.filter(p=> !filter || p.sku.toLowerCase().includes(filter) || p.name.toLowerCase().includes(filter))
+   .map(p=>`<div class="card p-3 cursor-pointer hover:shadow-md transition" onclick="addToCart('${p.sku}')">
+    <div class="h-20 bg-slate-100 rounded-lg mb-2 flex items-center justify-center text-slate-300">${p.image_url ? '<img src="'+p.image_url+'" alt="" class="pos-product-photo">' : '<i data-lucide="shirt" class="w-8 h-8"></i>'}</div>
+    <div class="text-sm font-medium leading-tight">${p.name}</div>
+    <div class="text-xs text-slate-400">${p.sku}</div>
+    <div class="flex justify-between items-center mt-2">
+      <span class="text-xs bg-slate-100 px-2 py-0.5 rounded-full">${p.size}</span>
+      <span class="text-xs ${p.stock<10?'text-red-500':'text-emerald-600'}">${p.stock} left</span>
+    </div>
+    <div class="font-bold text-[var(--navy)] mt-1">${fmt(p.price)}</div>
+  </div>`).join('');
+  icons();
+}
+
+function addToCart(sku){
+  const p = products.find(x=>x.sku===sku); if(!p) return;
+  const line = cart.find(c=>c.sku===sku);
+  if(line) line.qty++; else cart.push({...p, qty:1});
+  renderCart();
+}
+function changeQty(sku,d){
+  const l = cart.find(c=>c.sku===sku); if(!l) return;
+  l.qty += d; if(l.qty<=0) cart = cart.filter(c=>c.sku!==sku);
+  renderCart();
+}
+function removeItem(sku){ cart = cart.filter(c=>c.sku!==sku); renderCart(); }
+function clearCart(){ cart=[]; renderCart(); }
+
+function totals(){
+  const sub = cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const dv = +document.getElementById('discVal').value||0;
+  const dt = document.getElementById('discType').value;
+  const disc = dt==='pct' ? sub*dv/100 : dv;
+  return {sub, disc: Math.min(disc,sub), grand: sub-Math.min(disc,sub)};
+}
+
+function renderCart(){
+  const box = document.getElementById('cartItems');
+  box.innerHTML = cart.length ? cart.map(c=>`<div class="py-2 flex items-center gap-2 text-sm">
+    <div class="flex-1"><div class="font-medium leading-tight">${c.name}</div><div class="text-xs text-slate-400">${c.sku}</div></div>
+    <button onclick="changeQty('${c.sku}',-1)" class="w-6 h-6 rounded-full bg-slate-100">-</button>
+    <span class="w-5 text-center">${c.qty}</span>
+    <button onclick="changeQty('${c.sku}',1)" class="w-6 h-6 rounded-full bg-slate-100">+</button>
+    <span class="w-20 text-right font-medium">${fmt(c.price*c.qty)}</span>
+    <button onclick="removeItem('${c.sku}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+  </div>`).join('') : '<div class="text-sm text-slate-400 py-6 text-center">Cart is empty. Scan or click a product.</div>';
+  const t = totals();
+  document.getElementById('subtotal').textContent = fmt(t.sub);
+  document.getElementById('discAmt').textContent = '- '+fmt(t.disc);
+  document.getElementById('grandTotal').textContent = fmt(t.grand);
+  icons();
+}
+['discVal','discType'].forEach(id=>document.getElementById(id).addEventListener('input',renderCart));
+
+document.getElementById('scanInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){
+    const v = e.target.value.trim().toLowerCase();
+    const exact = products.find(p=>p.sku.toLowerCase()===v);
+    if(exact){ addToCart(exact.sku); e.target.value=''; renderProducts(''); }
+    else renderProducts(v);
+    e.target.focus();
+  }
+});
+
+async function completeSale(){
+  if(!cart.length) return toast('Cart is empty.', true);
+  const t = totals();
+  const payload = {
+    items: cart.map(c=>({sku:c.sku, name:c.name, qty:c.qty, price:c.price})),
+    disc: t.disc,
+    pay: document.getElementById('payMethod').value,
+  };
+  const btn = document.getElementById('checkoutBtn');
+  btn.disabled = true; btn.classList.add('opacity-60');
+  try{
+    const sale = await api('POST', '/api/checkout', payload);
+    printReceipt(sale);
+    await loadSales();
+    cart = []; document.getElementById('discVal').value = 0;
+    renderCart();
+    await loadMetrics();
+    await loadProducts();
+    toast(`Sale ${sale.invoice_no} recorded.`);
+  }catch(e){ /* toast already shown */ }
+  finally{
+    btn.disabled = false; btn.classList.remove('opacity-60');
+    document.getElementById('scanInput').focus();
+  }
+}
+
+function escapeHTML(value){
+  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+async function printReceipt(sale){
+  const receipt=document.getElementById('receipt');
+  document.getElementById('rMeta').innerHTML=`<div><b>Invoice:</b> ${escapeHTML(sale.invoice_no)}</div><div><b>Date:</b> ${escapeHTML(sale.date_time)}</div><div><b>Payment:</b> ${escapeHTML(sale.payment_method)}</div>`;
+  document.getElementById('rItems').innerHTML=sale.items.map(item=>`<div class="receipt-item"><span class="receipt-item-name">${escapeHTML(item.name)}${item.size?` (${escapeHTML(item.size)})`:''}</span><span class="receipt-qty">x ${Number(item.qty)||0}</span><span class="receipt-price">${fmt((Number(item.price)||0)*(Number(item.qty)||0))}</span></div>`).join('');
+  document.getElementById('rTotals').innerHTML=`<div class="receipt-total"><span>Subtotal</span><span>${fmt(sale.subtotal)}</span></div><div class="receipt-total"><span>Discount</span><span>-${fmt(sale.discount)}</span></div><div class="receipt-total receipt-grand"><span>TOTAL</span><span>${fmt(sale.grand_total)}</span></div>`;
+
+  receipt.style.cssText='display:block;position:absolute;left:-10000px;top:0;width:72mm;padding:3mm;font-family:"Nirmala UI","Iskoola Pota",Arial,sans-serif;font-size:10px;line-height:1.35';
+  if(document.fonts?.ready) await document.fonts.ready;
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const paperHeight=Math.max(55,Math.ceil((receipt.scrollHeight+12)*25.4/96));
+  const printStyle=document.getElementById('receiptPrintPage')||document.createElement('style');
+  printStyle.id='receiptPrintPage';
+  printStyle.textContent=`@media print{@page{size:80mm ${paperHeight}mm;margin:0}}`;
+  document.head.appendChild(printStyle);
+  receipt.style.display='none';
+  const cleanup=()=>{printStyle.remove();window.removeEventListener('afterprint',cleanup)};
+  window.addEventListener('afterprint',cleanup,{once:true});
+  window.print();
+}
+
+// ---- Fabric / Production / Expenses (loaded from Google Sheets via backend) ----
+let fabricRecords=[],productionRecords=[],expenseRecords=[],salesInvoices=[];
+async function loadSales(){
+  try{
+    const records=await api('GET','/api/sales-list'),grouped=new Map();
+    records.forEach(r=>{
+      const key=String(r.Invoice_No||'');if(!key)return;
+      if(!grouped.has(key))grouped.set(key,{invoice:key,date:r.Date_Time||'',items:0,total:0,payment:r.Payment_Method||''});
+      const invoice=grouped.get(key);invoice.items+=Number(r.Qty)||0;invoice.total+=Number(r.Total)||0;
+    });
+    salesInvoices=[...grouped.values()].reverse();
+    document.getElementById('salesBody').innerHTML=salesInvoices.map(i=>{
+      const key=escapeHTML(i.invoice);
+      return '<tr class="border-t"><td class="p-3 font-medium">'+key+'</td><td>'+escapeHTML(i.date)+'</td><td>'+i.items+'</td><td>'+fmt(i.total)+'</td><td>'+escapeHTML(i.payment)+'</td><td class="whitespace-nowrap"><button class="record-action" onclick="editSale(\''+key+'\')">Edit</button> <button class="record-action danger" onclick="deleteRecord(\'sales\',\''+key+'\')">Void / Delete</button></td></tr>';
+    }).join('')||'<tr><td class="p-3 text-slate-400" colspan="6">No sales recorded yet.</td></tr>';
+  }catch(e){}
+}
+function editSale(invoice){
+  const sale=salesInvoices.find(x=>x.invoice===invoice);if(!sale)return;
+  showModal('sale-edit');editingRecordId=invoice;
+  document.getElementById('m1').value=sale.payment;
+}
+
+async function loadFabric(){
+  try{
+    fabricRecords=await api('GET','/api/fabric-list');
+    document.getElementById('fabricBody').innerHTML=fabricRecords.map(f=>{
+      const id=escapeHTML(f.Fabric_ID||''), meters=Number(f.Roll_Meters)||0,low=meters<50;
+      return '<tr class="border-t"><td class="p-3">'+escapeHTML(f.Fabric_Type||'')+'</td><td>'+meters+'m</td><td>'+fmt(f.Cost_Per_Meter)+'</td><td>'+fmt(f.Total_Cost)+'</td><td>'+escapeHTML(f.Supplier||'')+'</td><td><span class="text-xs px-2 py-1 rounded-full '+(low?'bg-red-100 text-red-600':'bg-emerald-100 text-emerald-600')+'">'+(low?'Low Stock':'In Stock')+'</span></td><td class="whitespace-nowrap"><button class="record-action" onclick="editFabric(\''+id+'\')">Edit</button> <button class="record-action danger" onclick="deleteRecord(\'fabric\',\''+id+'\')">Delete</button></td></tr>';
+    }).join('')||'<tr><td class="p-3 text-slate-400" colspan="7">No fabric rolls yet.</td></tr>';
+  }catch(e){}
+}
+async function loadProduction(){
+  try{
+    productionRecords=await api('GET','/api/production-list');
+    document.getElementById('prodBody').innerHTML=productionRecords.map(p=>{
+      const id=escapeHTML(p.Production_ID||'');
+      return '<tr class="border-t"><td class="p-3">'+escapeHTML(p.Design_Name||'')+'</td><td>'+escapeHTML(p.Size||'')+'</td><td>'+(p.Qty_Produced||0)+'</td><td>'+(p.Meters_Used||0)+'m</td><td>'+fmt(p.Cost_Per_Piece)+'</td><td class="whitespace-nowrap"><button class="record-action" onclick="editProduction(\''+id+'\')">Edit</button> <button class="record-action danger" onclick="deleteRecord(\'production\',\''+id+'\')">Delete</button></td></tr>';
+    }).join('')||'<tr><td class="p-3 text-slate-400" colspan="6">No production logged yet.</td></tr>';
+  }catch(e){}
+}
+async function loadExpenses(){
+  try{
+    expenseRecords=await api('GET','/api/expenses-list');
+    document.getElementById('expenseList').innerHTML=expenseRecords.map(e=>{
+      const id=escapeHTML(e.Expense_ID||'');
+      return '<div class="p-3 flex justify-between items-center gap-3 text-sm"><div class="flex items-center gap-2 min-w-0"><i data-lucide="'+(e.Category==='Wage'?'user':'zap')+'" class="w-4 h-4 text-slate-400"></i><div class="min-w-0"><div class="font-medium">'+escapeHTML(e.Category||'')+'</div><div class="text-xs text-slate-400">'+escapeHTML(e.Notes||'')+' | '+escapeHTML(e.Date||'')+'</div><div class="text-xs text-slate-400">'+escapeHTML(e.Paid_To||'')+'</div></div></div><div class="flex items-center gap-3 shrink-0"><span class="font-semibold text-red-500">-'+fmt(e.Amount)+'</span><span class="whitespace-nowrap"><button class="record-action" onclick="editExpense(\''+id+'\')">Edit</button> <button class="record-action danger" onclick="deleteRecord(\'expense\',\''+id+'\')">Delete</button></span></div></div>';
+    }).join('')||'<div class="p-4 text-slate-400 text-sm">No expenses recorded yet.</div>';
+    icons();
+  }catch(e){}
+}
+function editFabric(id){
+  const f=fabricRecords.find(x=>x.Fabric_ID===id);if(!f)return;
+  showModal('fabric-edit');editingRecordId=id;
+  document.getElementById('m1').value=f.Fabric_Type||'';document.getElementById('m2').value=f.Roll_Meters||0;document.getElementById('m3').value=f.Cost_Per_Meter||0;document.getElementById('m4').value=f.Supplier||'';
+}
+function editProduction(id){
+  const p=productionRecords.find(x=>x.Production_ID===id);if(!p)return;
+  showModal('production-edit');editingRecordId=id;
+  document.getElementById('m1').value=p.Design_Name||'';document.getElementById('m5').value=p.Size||'';document.getElementById('m2').value=p.Qty_Produced||0;document.getElementById('m3').value=p.Meters_Used||0;document.getElementById('m4').value=p.Cost_Per_Piece||0;
+}
+function editExpense(id){
+  const e=expenseRecords.find(x=>x.Expense_ID===id);if(!e)return;
+  showModal('expense-edit');editingRecordId=id;
+  const category=document.getElementById('m1');
+  if(![...category.options].some(o=>o.value===e.Category))category.add(new Option(e.Category,e.Category));
+  category.value=e.Category||'Other';document.getElementById('m2').value=e.Amount||0;document.getElementById('m5').value=e.Paid_To||'';document.getElementById('m3').value=e.Notes||'';
+}
+async function deleteRecord(type,id){
+  const names={fabric:'fabric purchase',production:'production entry',expense:'expense entry',sales:'sales invoice (stock will be restored)'};
+  if(!confirm('Delete this '+names[type]+'? This cannot be undone.'))return;
+  try{
+    const endpoint=type==='sales'?'/api/sales-invoice/':'/api/'+(type==='expense'?'expense':type)+'-record/';
+    await api('DELETE',endpoint+encodeURIComponent(id));
+    await ({fabric:loadFabric,production:loadProduction,expense:loadExpenses,sales:loadSales}[type])();
+    await loadMetrics();toast('Record deleted.');
+  }catch(e){}
+}
+
+// ---- Modal (add fabric / production / expense) ----
+let modalMode = null, editingRecordId = null;
+function previewProductImage(input){
+  const file=input.files&&input.files[0],preview=document.getElementById('mImagePreview');
+  if(!file){preview.classList.add('hidden');return;}
+  if(file.size>5*1024*1024){input.value='';preview.classList.add('hidden');return toast('Photo must be 5 MB or smaller.',true);}
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){input.value='';preview.classList.add('hidden');return toast('Use a JPG, PNG, or WEBP image.',true);}
+  preview.src=URL.createObjectURL(file);preview.classList.remove('hidden');
+}
+function showModal(mode){
+  modalMode = mode;
+  const formMode = mode.endsWith('-edit')?mode.slice(0,-5):mode;
+  editingRecordId=null;
+  const forms = {
+    fabric: `<input id="m1" placeholder="Fabric type" class="w-full border rounded px-3 py-2 text-sm"><input id="m2" type="number" placeholder="Roll meters" class="w-full border rounded px-3 py-2 text-sm"><input id="m3" type="number" placeholder="Cost per meter (LKR)" class="w-full border rounded px-3 py-2 text-sm"><input id="m4" placeholder="Supplier" class="w-full border rounded px-3 py-2 text-sm">`,
+    production: `<input id="m1" placeholder="Design name" class="w-full border rounded px-3 py-2 text-sm"><input id="m5" placeholder="Size (S/M/L/XL)" class="w-full border rounded px-3 py-2 text-sm"><input id="m2" type="number" placeholder="Quantity produced" class="w-full border rounded px-3 py-2 text-sm"><input id="m3" type="number" placeholder="Meters used" class="w-full border rounded px-3 py-2 text-sm"><input id="m4" type="number" placeholder="Cost per piece (LKR)" class="w-full border rounded px-3 py-2 text-sm">`,
+    expense: `<select id="m1" class="w-full border rounded px-3 py-2 text-sm"><option>Wage</option><option>Electricity</option><option>Packaging</option><option>Thread</option><option>Other</option></select><input id="m2" type="number" placeholder="Amount (LKR)" class="w-full border rounded px-3 py-2 text-sm"><input id="m5" placeholder="Paid to" class="w-full border rounded px-3 py-2 text-sm"><input id="m3" placeholder="Note (optional)" class="w-full border rounded px-3 py-2 text-sm">`,
+    sale: '<select id="m1" class="w-full border rounded px-3 py-2 text-sm"><option>Cash</option><option>Card</option><option>Bank Transfer</option></select>',
+    product: '<div class="sku-entry"><input id="m1" placeholder="SKU / Barcode value" class="w-full border rounded px-3 py-2 text-sm"><button type="button" onclick="generateProductSku()">Generate SKU</button><button type="button" onclick="previewProductBarcode()">Preview</button></div><div id="barcodeFormWrap" class="barcode-form hidden"><svg id="barcodePreview"></svg></div><input id="m2" placeholder="Product name" class="w-full border rounded px-3 py-2 text-sm"><input id="m3" placeholder="Size / variant" class="w-full border rounded px-3 py-2 text-sm"><input id="m4" type="number" min="0" step="any" placeholder="Selling price (LKR)" class="w-full border rounded px-3 py-2 text-sm"><input id="m5" type="number" min="0" step="1" placeholder="Opening stock" class="w-full border rounded px-3 py-2 text-sm"><label class="text-xs font-medium text-slate-600" for="m6">Product photo (JPG, PNG, WEBP; up to 5 MB)</label><input id="m6" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewProductImage(this)" class="w-full border rounded px-3 py-2 text-sm"><img id="mImagePreview" class="image-preview hidden" alt="Product photo preview">'
+  };
+  document.getElementById('modalTitle').textContent = mode.endsWith('-edit')?{fabric:'Update Fabric Roll',production:'Update Production Entry',expense:'Update Expense / Wage',product:'Update Product',sale:'Update Invoice Payment'}[formMode]:{fabric:'Add Fabric Roll', production:'Log Production', expense:'Add Expense / Wage', product:'Add Product', sale:'Update Invoice Payment'}[formMode];
+  document.getElementById('modalBody').innerHTML = forms[formMode];
+  document.getElementById('modalWrap').classList.remove('hidden');
+}
+function closeModal(){ document.getElementById('modalWrap').classList.add('hidden'); }
+
+async function submitModal(){
+  try{
+    const field = id => document.getElementById(id);
+    if(modalMode==='fabric'||modalMode==='fabric-edit'){
+      const name=field('m1').value, meters=+field('m2').value||0, cost=+field('m3').value||0, supplier=field('m4').value;
+      if(!name) return toast('Fabric type is required.', true);
+      await api(modalMode==='fabric-edit'?'PUT':'POST',modalMode==='fabric-edit'?'/api/fabric-record/'+encodeURIComponent(editingRecordId):'/api/add-fabric',{name,meters,cost,supplier});
+      await loadFabric();
+    } else if(modalMode==='production'||modalMode==='production-edit'){
+      const item=field('m1').value, size=field('m5').value, qty=+field('m2').value||0, meters=+field('m3').value||0, cost=+field('m4').value||0;
+      if(!item) return toast('Design name is required.', true);
+      await api(modalMode==='production-edit'?'PUT':'POST',modalMode==='production-edit'?'/api/production-record/'+encodeURIComponent(editingRecordId):'/api/add-production',{item,size,qty,meters,cost});
+      await loadProduction();
+    } else if(modalMode==='expense'||modalMode==='expense-edit'){
+      const cat=field('m1').value, amt=+field('m2').value||0, paid_to=field('m5').value, note=field('m3').value;
+      if(!amt) return toast('Amount is required.', true);
+      await api(modalMode==='expense-edit'?'PUT':'POST',modalMode==='expense-edit'?'/api/expense-record/'+encodeURIComponent(editingRecordId):'/api/add-expense',{cat,amt,paid_to,note});
+      await loadExpenses();
+    } else if(modalMode==='sale-edit'){
+      await api('PUT','/api/sales-invoice/'+encodeURIComponent(editingRecordId),{pay:field('m1').value});
+      await loadSales();
+    } else if(modalMode==='product'||modalMode==='product-edit'){
+      const product=new FormData();
+      product.append('sku',field('m1').value);product.append('name',field('m2').value);product.append('size',field('m3').value);
+      product.append('price',field('m4').value);product.append('stock',field('m5').value);
+      if(field('m6').files[0])product.append('image',field('m6').files[0]);
+      await api(modalMode==='product-edit'?'PUT':'POST','/api/products',product);
+      await loadProducts();
+    }
+    closeModal();
+    await loadMetrics();
+    toast(modalMode.endsWith('-edit')?'Record updated.':modalMode==='product'?'Product added.':'Entry saved.');
+  }catch(e){ /* toast already shown */ }
+}
+
+// ---- Metrics / Dashboard ----
+async function loadMetrics(){
+  try{
+    const m = await api('GET', '/api/dashboard-metrics');
+    const cards = [
+      {label:'Total Revenue', val:m.total_revenue, color:'text-emerald-600', icon:'trending-up'},
+      {label:'Fabric Investment', val:m.fabric_investment, color:'text-blue-600', icon:'layers'},
+      {label:'Expenses & Wages', val:m.total_expenses, color:'text-red-500', icon:'wallet'},
+      {label:'Net Profit', val:m.net_profit, color: m.net_profit>=0?'text-emerald-600':'text-red-500', icon:'sparkles'},
+    ];
+    document.getElementById('metrics').innerHTML = cards.map(c=>`<div class="card p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs"><span>${c.label}</span><i data-lucide="${c.icon}" class="w-4 h-4"></i></div>
+      <div class="text-xl font-bold mt-1 ${c.color}">${fmt(c.val)}</div></div>`).join('');
+    document.getElementById('dashDetail').innerHTML = `
+      <div class="p-3 bg-slate-50 rounded-lg">Sales completed: <b>${m.sales_count}</b></div>
+      <div class="p-3 bg-slate-50 rounded-lg">Fabric rolls in stock: <b>${m.fabric_count}</b></div>
+      <div class="p-3 bg-slate-50 rounded-lg">Production runs logged: <b>${m.production_count}</b></div>
+      <div class="p-3 bg-slate-50 rounded-lg">Expense entries: <b>${m.expenses_count}</b></div>`;
+    icons();
+  }catch(e){}
+}
+
+function svgText(x,y,text,attrs=""){
+  return '<text x="'+x+'" y="'+y+'" '+attrs+'>'+String(text).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})+'</text>';
+}
+function renderTrendChart(data){
+  const w=720,h=260,left=52,right=14,top=18,bottom=38,iw=w-left-right,ih=h-top-bottom;
+  const max=Math.max(1,...data.revenue,...data.expenses);
+  const y=v=>top+ih-(v/max)*ih, x=i=>left+(data.labels.length<2?iw/2:i*iw/(data.labels.length-1));
+  let out='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Revenue and expenses chart">';
+  for(let i=0;i<=4;i++){const yy=top+ih*i/4;const val=max*(1-i/4);out+='<line x1="'+left+'" y1="'+yy+'" x2="'+(w-right)+'" y2="'+yy+'" stroke="#e8edf4"/>'+svgText(left-8,yy+4,Math.round(val).toLocaleString(), 'text-anchor="end" fill="#8290a5" font-size="10"');}
+  [data.revenue,data.expenses].forEach((series,index)=>{const color=index?'#f28b63':'#1ca879';const pts=series.map((v,i)=>x(i)+','+y(v)).join(' ');out+='<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';series.forEach((v,i)=>{out+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3.5" fill="'+color+'"><title>'+data.labels[i]+': LKR '+v.toLocaleString()+'</title></circle>';});});
+  const step=Math.max(1,Math.ceil(data.labels.length/7));data.labels.forEach((label,i)=>{if(i%step===0||i===data.labels.length-1)out+=svgText(x(i),h-10,label,'text-anchor="middle" fill="#8290a5" font-size="10"');});
+  out+='</svg><div class="chart-legend"><span><i class="legend-dot" style="background:#1ca879"></i>Revenue</span><span><i class="legend-dot" style="background:#f28b63"></i>Costs</span></div>';
+  document.getElementById('trendChart').innerHTML=out;
+}
+function renderHorizontalBars(targetId,items,valueKey,color,emptyText){
+  const box=document.getElementById(targetId);
+  if(!items.length){box.innerHTML='<div class="empty-chart">'+emptyText+'</div>';return;}
+  const max=Math.max(1,...items.map(i=>Number(i[valueKey])||0)),w=520,row=39,h=items.length*row+8;
+  let out='<svg viewBox="0 0 '+w+' '+h+'" role="img">';
+  items.forEach((item,index)=>{const yy=index*row+5,label=String(item.name).length>19?String(item.name).slice(0,18)+'...':item.name,amount=Number(item[valueKey])||0;out+=svgText(0,yy+13,label,'fill="#465267" font-size="11"')+'<rect x="0" y="'+(yy+19)+'" width="'+(amount/max*(w-125))+'" height="10" rx="5" fill="'+color+'"/>'+svgText(w-2,yy+28,'LKR '+amount.toLocaleString(),'text-anchor="end" fill="#65738a" font-size="10"');});
+  box.innerHTML=out+'</svg>';
+}
+let analyticsReportData=null;
+async function loadAnalytics(){
+  const days=document.getElementById('analyticsDays').value;
+  try{
+    const data=await api('GET','/api/analytics?days='+days);
+    analyticsReportData=data;
+    renderTrendChart(data);
+    renderHorizontalBars('topProductsChart',data.top_products,'sales','#5b79d6','No sales in this period.');
+    renderHorizontalBars('expenseChart',data.expense_categories,'amount','#f28b63','No expenses in this period.');
+  }catch(e){}
+}
+function csvCell(value){
+  let text=String(value??'');
+  if(typeof value==='string'&&/^[=+@-]/.test(text))text="'"+text;
+  return '"'+text.replace(/"/g,'""')+'"';
+}
+function downloadAnalyticsCSV(){
+  if(!analyticsReportData)return toast('Wait for the analytics report to load.',true);
+  const data=analyticsReportData,rows=[];
+  const add=values=>rows.push(values.map(csvCell).join(','));
+  const revenue=data.revenue.reduce((a,v)=>a+(Number(v)||0),0);
+  const expenses=data.expenses.reduce((a,v)=>a+(Number(v)||0),0);
+  add(['EMMY Cloths Analytics Report']);
+  add(['Period (days)',data.days]);
+  add(['Generated at',new Date().toLocaleString('en-LK')]);
+  add([]);
+  add(['Summary','LKR']);
+  add(['Revenue',revenue]);
+  add(['Expenses',expenses]);
+  add(['Net result',revenue-expenses]);
+  add([]);
+  add(['Daily breakdown']);
+  add(['Date','Revenue (LKR)','Expenses (LKR)','Net (LKR)']);
+  data.labels.forEach((label,index)=>add([data.dates?.[index]||label,data.revenue[index],data.expenses[index],(Number(data.revenue[index])||0)-(Number(data.expenses[index])||0)]));
+  add([]);
+  add(['Top products']);
+  add(['Product','Quantity sold','Sales (LKR)']);
+  (data.top_products||[]).forEach(item=>add([item.name,item.qty,item.sales]));
+  add([]);
+  add(['Expense categories']);
+  add(['Category','Amount (LKR)']);
+  (data.expense_categories||[]).forEach(item=>add([item.name,item.amount]));
+  const blob=new Blob([String.fromCharCode(65279)+rows.join(String.fromCharCode(13,10))],{type:'text/csv;charset=utf-8'});
+  const link=document.createElement('a'),url=URL.createObjectURL(blob);
+  link.href=url;link.download='EMMY_Analytics_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function printAnalyticsReport(){
+  if(!analyticsReportData)return toast('Wait for the analytics report to load.',true);
+  const days=analyticsReportData.days;
+  document.getElementById('analyticsPrintMeta').textContent='Last '+days+' days | Generated '+new Date().toLocaleString('en-LK');
+  const style=document.createElement('style');style.id='analyticsPrintStyle';
+  style.textContent='@media print{@page{size:A4 portrait;margin:14mm}html,body{width:auto!important;min-width:0!important;height:auto!important;margin:0!important;padding:0!important;background:#fff!important;color:#172033!important}body.printing-analytics>.min-h-screen:not(#receipt){display:block!important}body.printing-analytics>#receipt{display:none!important}body.printing-analytics>.min-h-screen>aside,body.printing-analytics .app-header,body.printing-analytics #metrics,body.printing-analytics .app-footer,body.printing-analytics .analytics-toolbar{display:none!important}body.printing-analytics>.min-h-screen>main{display:block!important;width:auto!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important}body.printing-analytics>.min-h-screen>main>*{display:none!important}body.printing-analytics #tab-dash{display:block!important;visibility:visible!important}body.printing-analytics #tab-dash>.card{display:block!important;padding:0!important;border:0!important;box-shadow:none!important;background:#fff!important;color:#172033!important}body.printing-analytics #tab-dash>.card>h2,body.printing-analytics #tab-dash>.card>p{display:none!important}body.printing-analytics #tab-dash .report-print-header{display:block!important;margin:0 0 12mm!important}body.printing-analytics #tab-dash .report-print-header h1{font-size:19pt!important;margin:0 0 3mm!important;color:#111c35!important}body.printing-analytics #tab-dash .report-print-header p{font-size:9pt!important;color:#566176!important}body.printing-analytics #tab-dash .analytics-grid{grid-template-columns:1fr 1fr!important;gap:5mm!important}body.printing-analytics #tab-dash .chart-card{break-inside:avoid!important;page-break-inside:avoid!important;margin:0 0 5mm!important;padding:4mm!important;border:1px solid #dce2ec!important;background:#fff!important;color:#172033!important}body.printing-analytics #tab-dash .chart-card h3,body.printing-analytics #tab-dash .chart-card p{color:#172033!important}body.printing-analytics #tab-dash .chart-area{min-height:0!important}body.printing-analytics #tab-dash .chart-card svg text{fill:#465267!important}body.printing-analytics #tab-dash #dashDetail{display:none!important}body.printing-analytics *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}';
+  document.head.appendChild(style);document.body.classList.add('printing-analytics');
+  const cleanup=()=>{document.body.classList.remove('printing-analytics');style.remove();window.removeEventListener('afterprint',cleanup)};
+  window.addEventListener('afterprint',cleanup,{once:true});window.print();
+}
+// ---- Tabs ----
+async function loadProducts(){
+  try{
+    const rows=await api('GET','/api/products');
+    products=rows.map(p=>({sku:String(p.SKU||''),name:String(p.Item_Name||''),size:String(p.Size||''),price:Number(p.Unit_Price||0),stock:Number(p.Stock||0),image_url:String(p.Image_URL||'')}));
+    renderProducts();
+    document.getElementById('productBody').innerHTML=products.map(p=>`<tr class="border-t"><td class="p-3">${p.sku}</td><td><div class="product-cell">${p.image_url ? '<img class="product-thumb" src="'+p.image_url+'" alt="">' : '<span class="product-thumb empty">No photo</span>'}<span>${p.name}</span></div></td><td>${p.size}</td><td>${fmt(p.price)}</td><td>${p.stock}</td><td><button onclick="showBarcode('${p.sku}')">View / Print</button></td><td><button onclick="editProduct('${p.sku}')">Edit</button> <button onclick="deleteProduct('${p.sku}')">Delete</button></td></tr>`).join('')||'<tr><td class="p-3 text-slate-400" colspan="7">No products in catalog.</td></tr>';
+  }catch(e){ toast('Could not load products. Check Google Sheets connection and sharing.',true); }
+}
+function barcodeSvg(sku,id,displayValue=true){
+  if(!window.JsBarcode){toast('Barcode library did not load. Check internet connection.',true);return false;}
+  try{window.JsBarcode('#'+id,sku,{format:'CODE128',width:2,height:58,displayValue:displayValue,fontSize:13,margin:4});return true;}catch(e){toast('Invalid barcode value.',true);return false;}
+}
+function generateProductSku(){
+  const field=document.getElementById('m1');let sku;
+  do{sku='EMM-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();}while(products.some(p=>p.sku===sku));
+  field.value=sku;previewProductBarcode();
+}
+function previewProductBarcode(){
+  const sku=(document.getElementById('m1')?.value||'').trim();
+  if(!sku)return toast('Enter or generate the SKU first.',true);
+  if(barcodeSvg(sku,'barcodePreview'))document.getElementById('barcodeFormWrap').classList.remove('hidden');
+}
+function showBarcode(sku){
+  const p=products.find(x=>x.sku===sku);if(!p)return;
+  document.getElementById('barcodeTitle').textContent=p.name;
+  document.getElementById('barcodeSubtitle').textContent='SKU / barcode: '+p.sku;
+  document.getElementById('barcodePrintName').textContent=p.name;
+  document.getElementById('barcodePrintValue').textContent=p.sku;
+  if(!barcodeSvg(p.sku,'barcodePreviewLarge'))return;
+  barcodeSvg(p.sku,'barcodePrintSvg');document.getElementById('barcodeWrap').classList.remove('hidden');
+}
+function closeBarcode(){document.getElementById('barcodeWrap').classList.add('hidden');}
+function printBarcodeLabel(barcodeOnly=false){
+  const style=document.getElementById('barcodePageStyle')||document.createElement('style');
+  style.id='barcodePageStyle';style.textContent='@media print{@page{size:A4 portrait;margin:5mm}html,body{width:200mm!important;min-width:200mm!important;height:287mm!important;min-height:287mm!important;margin:0!important;padding:0!important;overflow:hidden!important}}';document.head.appendChild(style);
+  const value=document.getElementById('barcodePrintValue').textContent;
+  document.documentElement.classList.add('printing-barcode-page');document.body.classList.add('printing-barcode');
+  if(barcodeOnly)document.body.classList.add('printing-barcode-only');
+  const printArea=document.getElementById('barcodePrint');
+  const productName=document.getElementById('barcodePrintName').textContent;
+  printArea.replaceChildren();
+  for(let i=0;i<40;i++){
+    const label=document.createElement('div');label.className='barcode-label';
+    const name=document.createElement('div');name.className='barcode-label-name';name.textContent=productName;
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.id='barcodePrintSvg-'+i;
+    const code=document.createElement('div');code.className='barcode-label-value';code.textContent=value;
+    label.append(name,svg,code);printArea.appendChild(label);
+    if(!barcodeSvg(value,svg.id,!barcodeOnly)){document.documentElement.classList.remove('printing-barcode-page');document.body.classList.remove('printing-barcode','printing-barcode-only');style.remove();printArea.innerHTML='<div id="barcodePrintName"></div><svg id="barcodePrintSvg"></svg><div id="barcodePrintValue"></div>';document.getElementById('barcodePrintName').textContent=productName;document.getElementById('barcodePrintValue').textContent=value;barcodeSvg(value,'barcodePrintSvg');return;}
+  }
+  const done=()=>{document.documentElement.classList.remove('printing-barcode-page');document.body.classList.remove('printing-barcode','printing-barcode-only');style.remove();printArea.innerHTML='<div id="barcodePrintName"></div><svg id="barcodePrintSvg"></svg><div id="barcodePrintValue"></div>';document.getElementById('barcodePrintName').textContent=productName;document.getElementById('barcodePrintValue').textContent=value;barcodeSvg(value,'barcodePrintSvg');window.removeEventListener('afterprint',done)};
+  window.addEventListener('afterprint',done,{once:true});window.print();
+}
+async function deleteProduct(sku){
+  const p=products.find(x=>x.sku===sku);if(!p)return;
+  if(!confirm('Remove '+p.name+' from active products? Existing sales remain saved.'))return;
+  try{await api('DELETE','/api/products',{sku});await loadProducts();toast('Product removed.');}catch(e){}
+}
+function editProduct(sku){
+  const p=products.find(item=>item.sku===sku); if(!p) return;
+  showModal('product-edit');
+  document.getElementById('modalTitle').textContent='Edit Product / Stock';
+  document.getElementById('m1').value=p.sku; document.getElementById('m1').readOnly=true; document.querySelectorAll('#modalBody .sku-entry button').forEach(button=>button.classList.add('hidden'));
+  document.getElementById('m2').value=p.name; document.getElementById('m3').value=p.size;
+  document.getElementById('m4').value=p.price; document.getElementById('m5').value=p.stock; if(window.JsBarcode)previewProductBarcode(); if(p.image_url){const photo=document.getElementById('mImagePreview');photo.src=p.image_url;photo.classList.remove('hidden');}
+}
+document.querySelectorAll('.navitem').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.navitem').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('main > section').forEach(s=>s.classList.add('hidden'));
+    document.getElementById('tab-'+btn.dataset.tab).classList.remove('hidden');
+    const headings={pos:['POS Billing','Create a sale, manage your cart, and print a customer receipt.'],products:['Products & Stock','Maintain your catalog, selling prices, and available quantities.'],fabric:['Fabric Stock','Track fabric purchases, supplier details, and material costs.'],production:['Production Log','Record completed garments and production costs.'],expenses:['Expenses & Wages','Keep a clear record of operating costs and staff payments.'],dash:['Analytics','Review sales, costs, and business performance from your records.']};
+    if(btn.dataset.tab==='dash')loadAnalytics();
+    const heading=headings[btn.dataset.tab];
+    document.getElementById('pageTitle').textContent=heading[0];
+    document.getElementById('pageSubtitle').textContent=heading[1];
+  });
+});
+
+document.getElementById('todayDate').textContent=new Date().toLocaleDateString('en-LK',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+document.getElementById('footerYear').textContent=String.fromCharCode(169)+' '+new Date().getFullYear();
+function applyTheme(theme,save=true){
+  const dark=theme==='dark';
+  document.body.classList.toggle('dark-mode',dark);
+  const toggle=document.getElementById('themeToggle');
+  toggle.setAttribute('aria-pressed',String(dark));
+  toggle.setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');
+  document.getElementById('themeIcon').textContent=String.fromCharCode(dark?9728:9790);
+  document.getElementById('themeLabel').textContent=dark?'Light mode':'Dark mode';
+  if(save){try{localStorage.setItem('emmy-theme',dark?'dark':'light')}catch(e){}}
+}
+let preferredTheme=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+try{preferredTheme=localStorage.getItem('emmy-theme')||preferredTheme}catch(e){}
+applyTheme(preferredTheme,false);
+document.getElementById('themeToggle').addEventListener('click',()=>applyTheme(document.body.classList.contains('dark-mode')?'light':'dark'));
+renderProducts(); renderCart();
+loadProducts(); loadFabric(); loadProduction(); loadExpenses(); loadSales(); loadMetrics();
+</script>
+</body>
+</html>
